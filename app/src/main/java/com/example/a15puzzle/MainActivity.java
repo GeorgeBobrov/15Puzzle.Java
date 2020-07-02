@@ -1,23 +1,28 @@
 package com.example.a15puzzle;
 
 import androidx.appcompat.app.AppCompatActivity;
-import androidx.constraintlayout.widget.ConstraintLayout;
 
-import android.content.Context;
+import android.animation.AnimatorSet;
+import android.animation.ObjectAnimator;
+import android.animation.TimeInterpolator;
+import android.content.res.ColorStateList;
 import android.os.Bundle;
 import android.graphics.Color;
 import android.os.Handler;
 import android.util.Log;
+import android.view.MotionEvent;
 import android.view.View;
+import android.view.ViewGroup;
 import android.view.ViewGroup.LayoutParams;
+import android.view.animation.AccelerateInterpolator;
+import android.view.animation.DecelerateInterpolator;
+import android.view.animation.LinearInterpolator;
+import android.view.animation.PathInterpolator;
 import android.widget.Button;
 import android.widget.RelativeLayout;
 import android.widget.TextView;
 
-import java.util.Date;
 import java.util.Random;
-import java.util.Timer;
-import java.util.TimerTask;
 
 
 public class MainActivity extends AppCompatActivity {
@@ -66,15 +71,25 @@ public class MainActivity extends AppCompatActivity {
 	TextView TextTime;
 	RelativeLayout PanelClient;
 	View.OnClickListener TileClickListener;
+	View.OnTouchListener TileTouchListener;
+
+	TimeInterpolator decelerate;
+	TimeInterpolator accelerate;
+	TimeInterpolator linear;
+	TimeInterpolator inBack;
+	TimeInterpolator outExpo;
 
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
 		setContentView(R.layout.activity_main);
 
-		PanelClient = (RelativeLayout) findViewById(R.id.PanelClient);
-//		mStartButton = (Button) findViewById(R.id.buttonStart);
-		TextTime = (TextView) findViewById(R.id.TextTime);
+		PanelClient = findViewById(R.id.PanelClient);
+//		mStartButton = findViewById(R.id.buttonStart);
+		TextTime = findViewById(R.id.TextTime);
+
+		Tiles = new Button[0];
+
 
 		TimerTime = new android.os.Handler();
 		TimerResize = new android.os.Handler();
@@ -99,8 +114,27 @@ public class MainActivity extends AppCompatActivity {
 			public void onClick(View sender) { OnTilePressed(sender); }
 		};
 
-		TileFillNormalColor1 = Color.parseColor("#FFFFE4C4"); //bisque
-		TileFillNormalColor2 = Color.parseColor("#FFABE024");
+		TileTouchListener = new View.OnTouchListener() {
+			@Override
+			public boolean onTouch(View sender, MotionEvent event) {
+				if (event.getAction() == MotionEvent.ACTION_DOWN){
+					OnTilePressed(sender);
+					return true;
+				}
+				return false;
+			}
+
+		};
+
+
+		TileFillNormalColor1 = 0xFFFFE4C4; //bisque
+		TileFillNormalColor2 = 0xFFABE024;
+
+		decelerate = new DecelerateInterpolator();
+		accelerate = new AccelerateInterpolator();
+		linear = new LinearInterpolator();
+		inBack = new PathInterpolator(0.6f, -0.28f, 0.735f, 0.045f);
+		outExpo = new PathInterpolator(0.19f, 1f, 0.22f, 1f);
 
 //  PanelClient  background-color: rgb(244, 244, 244);
 
@@ -112,27 +146,19 @@ public class MainActivity extends AppCompatActivity {
 	void  SetMode(TMode Value)
 	{
 		Mode = Value;
-		if (Mode == TMode.Game) {
+		if (Mode == TMode.Game)
 			TimerTime.postDelayed(TimerTimeRunnable, 1000);
-			Log.d("Timer", "TimerTime.postDelayed(TimerTimeRunnable, 1000)");
-		}
-		else {
+		else
 			TimerTime.removeCallbacks(TimerTimeRunnable);
-			Log.d("Timer", "TimerTime.removeCallbacks(TimerTimeRunnable)");
-		}
-/*
-		// Param is optional, to run task on UI thread.
-		Handler handler = new Handler(Looper.getMainLooper());
-		Runnable runnable = new Runnable() { @Override public void run() { }};
-		// Do the task...
-		handler.postDelayed(this, milliseconds);
-		// Optional, to repeat the task. } };
-		handler.postDelayed(runnable, milliseconds);
-		// Stop a repeating task like this.
-		handler.removeCallbacks(runnable);
-*/
+	}
 
-//		TimerTime.schedule(TimerTimeTask, 0, 1000);
+	public void ButtonBaseOnClick(View sender)
+	{
+		Button SenderButton = (Button) sender;
+		char chrBase = SenderButton.getText().charAt(0);
+		String strBase = Character.toString(chrBase);
+		int LBase = Integer.parseInt(strBase);
+		SetBase(LBase);
 	}
 
 	void SetBase(int Value)
@@ -147,7 +173,12 @@ public class MainActivity extends AppCompatActivity {
 		Base = Value;
 		SetMaxTime();
 
-		TimerCreateTiles.postDelayed(TimerCreateTilesRunnable, 100);
+		int dalay;
+		if ( Tiles.length > 0)
+			dalay = ( 520 + 30 * Tiles.length);
+		else
+			dalay = (50);
+		TimerCreateTiles.postDelayed(TimerCreateTilesRunnable, dalay);
 	}
 
 
@@ -163,11 +194,11 @@ public class MainActivity extends AppCompatActivity {
 
 	void CreateTiles()
 	{
-		if (Tiles != null)
 		for (int i = 0; i < Tiles.length; i++)
 			if (Tiles[i] != null)
 			{
 //				TGradientAnimation *GradientAni = (TGradientAnimation*)Tiles[i].property("GradientAni").value<void *>() ;
+				((ViewGroup) Tiles[i].getParent()).removeView(Tiles[i]);
 				Tiles[i] = null;
 			}
 
@@ -179,7 +210,8 @@ public class MainActivity extends AppCompatActivity {
 
 				NewTile = (Button) new Button(this);
 
-				NewTile.setOnClickListener(TileClickListener);
+//				NewTile.setOnClickListener(TileClickListener);
+				NewTile.setOnTouchListener(TileTouchListener);
 
 				NewTile.setText(String.valueOf(i + 1));
 
@@ -188,18 +220,20 @@ public class MainActivity extends AppCompatActivity {
 //
 //				NewTile.setStyleSheet(GenerateTileStyleSheet(TileFillNormalColor1, TileFillNormalColor2));
 //				GradientAni.SetCurColors(TileFillNormalColor1, TileFillNormalColor2);
+				NewTile.setBackgroundTintList(ColorStateList.valueOf(TileFillNormalColor1));
 
 //				NewTile.setLayoutParams(new LayoutParams(LayoutParams.WRAP_CONTENT,
 //						LayoutParams.WRAP_CONTENT));
 
-				NewTile.setHeight(50);
-				NewTile.setWidth(50);
+				NewTile.setLayoutParams(new LayoutParams(100,100));
+
+
+
+//				NewTile.setHeight(50);
+//				NewTile.setWidth(50);
 
 				PanelClient.addView(NewTile);
-//				NewTile.layout();
 
-				NewTile.setTranslationX((i/4)*50);
-				NewTile.setTranslationY((i%4)*50);
 
 //			NewTile.SendToBack;
 				Tiles[i] = NewTile;
@@ -298,14 +332,21 @@ public class MainActivity extends AppCompatActivity {
 		int NewCol = ActPos % Base;
 		int NewRow = ActPos / Base;
 
-		long X = SpaceX + Math.round(NewCol * (TileSize + TileSpacing));
-		long Y = SpaceY + Math.round(NewRow * (TileSize + TileSpacing));
+		float OffsetOnScaledTile = (TileSize - ATile.getLayoutParams().width) / 2.0f;
 
-//		if (MoveAniDuration > 0)
-//		{
+		long X = SpaceX + Math.round(NewCol * (TileSize + TileSpacing) + OffsetOnScaledTile);
+		long Y = SpaceY + Math.round(NewRow * (TileSize + TileSpacing) + OffsetOnScaledTile);
+
+		if ((MoveAniDuration > 0) && WaitAnimationEnd)
+		{
 //			AnimatePropertyDelay(ATile, "geometry", geometry, MoveAniDuration, 0, QEasingCurve.OutExpo, true, WaitAnimationEnd);
-//		}
-//		else
+
+			ATile.animate().translationX(X).translationY(Y)
+					.setDuration((long) MoveAniDuration).setStartDelay(0)
+					.setInterpolator(outExpo);
+
+		}
+		else
 		{
 			ATile.setTranslationX(X);
 			ATile.setTranslationY(Y);
@@ -319,7 +360,7 @@ public class MainActivity extends AppCompatActivity {
 		for (int i = 0; i < Tiles.length; i++)
 			if (Tiles[i] != null)
 			{
-				int TextNumber = Integer.parseInt( Tiles[i].getText().toString() );
+				int TextNumber = Integer.parseInt( Tiles[i].getText().toString());
 
 				if ((TextNumber - 1) != ActualPosition(Tiles[i]))
 				{
@@ -343,7 +384,7 @@ public class MainActivity extends AppCompatActivity {
 
 
 
-	public void OnButtonShuffleClicked(View sender)
+	public void ButtonShuffleOnClick(View sender)
 	{
 		AnimateNormalizeTilesColor();
 
@@ -366,7 +407,7 @@ public class MainActivity extends AppCompatActivity {
 			do
 			{
 				NewI = RandomGen.nextInt(Tiles.length);
-				WasMoved =  TryMoveTile(NewI, MoveAniDuration, true);
+				WasMoved =  TryMoveTile(NewI, MoveAniDuration, false);
 			}
 			while (! WasMoved);
 		}
@@ -463,7 +504,8 @@ public class MainActivity extends AppCompatActivity {
 //	}
 
 //-------------------------------   Animations   -----------------------------
-	void CalcConsts( ){
+	void CalcConsts()
+	{
 		int Height = (PanelClient.getMeasuredHeight());
 		int Width = (PanelClient.getMeasuredWidth());
 
@@ -486,56 +528,203 @@ public class MainActivity extends AppCompatActivity {
 
 	}
 
-	void AnimatePlaceTilesFast( ){
+	void AnimatePlaceTilesFast()
+	{
 		CalcConsts();
-
+		Log.d("Animate", "PlaceTilesFast");
 		for (int i = 0; i < Tiles.length; i++)
 			if (Tiles[i] != null)
 			{
-				float ScaleX = ((float)TileSize) / Tiles[i].getMinimumWidth();
-				float ScaleY = ((float)TileSize) / Tiles[i].getMinimumHeight();
-
-//				int OffsetOnScaledTile = (TileSize - Tiles[i].getWidth()) / 2;
-
-				int dl = 30 * i; //delay for tile
-
-//				Tiles[i].style.transition = `all 200ms linear 0ms,
-//				transform 200ms linear ${100 + dl}ms,
-//				left 200ms linear ${dl}ms,
-//				top 100ms linear ${dl}ms,
-//				opacity 400ms linear ${100 + dl}ms`;
-
-//				ScaleSettings = "scale(" + ScaleX + ")";
-//				Tiles[i].style.transform = ScaleSettings;
-				Tiles[i].setScaleX(ScaleX);
-				Tiles[i].setScaleY(ScaleY);
-
-
+				Button Tile = Tiles[i];
+				int delay = 30 * i; //delay for tile
 
 				int Col = i % Base;
 				int Row = i / Base;
 
-				long X = SpaceX + Math.round(Col * (TileSize + TileSpacing));
-				long Y = SpaceY + Math.round(Row * (TileSize + TileSpacing));
+				float ScaleX = ((float)TileSize) / Tile.getLayoutParams().width;
+				float ScaleY = ((float)TileSize) / Tile.getLayoutParams().height;
 
+				float OffsetOnScaledTile = (TileSize - Tile.getLayoutParams().width) / 2.0f;
 
-//				let X = SpaceX + Math.round(Col * (Tiles[i].offsetWidth * ScaleX + TileSpacing) + OffsetOnScaledTile);
-//				let Y = SpaceY + Math.round(Row * (Tiles[i].offsetHeight * ScaleY + TileSpacing) + OffsetOnScaledTile);
+				long X = SpaceX + Math.round(Col * (Tile.getLayoutParams().width * ScaleX + TileSpacing) + OffsetOnScaledTile);
+				long Y = SpaceY + Math.round(Row * (Tile.getLayoutParams().height *ScaleY + TileSpacing) + OffsetOnScaledTile);
 
-				Tiles[i].setTranslationX(X);
-				Tiles[i].setTranslationY(Y);
+//				Tile.animate().scaleX(ScaleX).scaleY(ScaleY)
+//						.translationX(X).translationY(Y)
+//						.setDuration(100).setStartDelay(100l + delay).setInterpolator(linear);
 
+				AnimateFloatDelay(Tile, "scaleX", ScaleX, 200, 200 + delay);
+				AnimateFloatDelay(Tile, "scaleY", ScaleY, 200, 100 + delay);
+				AnimateFloatDelay(Tile, "translationX", X, 200, delay);
+				AnimateFloatDelay(Tile, "translationY", Y, 100, delay);
 			}
 
 	}
 
-	void AnimateTilesDisappeare( ){}
-	void AnimatePrepareBeforePlace( ){}
-	void AnimateBaseNotChanged( ){}
-	void AnimateTimeRunningOut( ){}
-	void AnimatePuzzleMatched( ){}
-	void AnimateTimeOver( ){}
-	void AnimateNormalizeTilesColor( ){}
-	void ShowDebug( ){}
+	void AnimateTilesDisappeare()
+	{
+		Button LastTile;
+		for (int i = 0; i < Tiles.length; i++)
+			if (Tiles[i] != null)
+			{
+				Button Tile = Tiles[i];
+				int delay = 30 * i; //delay for tile
+
+				long X = Math.round(Tile.getTranslationX() + ((TileSize) / 2.0));
+				long Y = Math.round(Tile.getTranslationY() + TileSize) ;
+
+				Tile.animate().scaleX(0.1f).scaleY(0.1f)
+						.rotation(45.0f).alpha(0)
+						.translationX(X).translationY(Y)
+						.setDuration(400).setStartDelay(delay).setInterpolator(inBack);
+
+//				AnimateFloatDelay(Tile, "scaleX", 0.1f, 400, delay);
+//				AnimateFloatDelay(Tile, "scaleY", 0.1f, 400, delay);
+//				AnimateFloatDelay(Tile, "rotation", 45, 400, delay);
+//				AnimateFloatDelay(Tile, "translationY", Y, 400, delay, inBack);
+//				AnimateFloatDelay(Tile, "translationX", X, 400, delay);
+//				AnimateFloatDelay(Tile, "alpha", 0, 400, 100 + delay);
+
+				LastTile = Tile;
+			}
+
+	}
+
+	void AnimatePrepareBeforePlace()
+	{
+		for (int i = 0; i < Tiles.length; i++)
+			if (Tiles[i] != null) {
+				Button Tile = Tiles[i];
+
+				float ScaleX = ((float)TileSize) / Tile.getLayoutParams().width;
+				float ScaleY = ((float)TileSize) / Tile.getLayoutParams().height;
+
+				int Col = i % Base;
+				int Row = i / Base;
+
+				long X = SpaceX + Math.round(Col * (Tile.getLayoutParams().width * ScaleX + TileSpacing));
+				long Y = SpaceY + Math.round(Row * (Tile.getLayoutParams().height * ScaleY + TileSpacing));
+
+				Tile.setScaleX(0.5f);
+				Tile.setScaleY(0.5f);
+
+				Tile.setAlpha(0);
+				Tile.setRotation(45.0f);
+				Tile.setTranslationX(X + Math.round((TileSize) / 2.0));
+				Tile.setTranslationY(Y + TileSize);
+
+			}
+
+		for (int i = 0; i < Tiles.length; i++)
+			if (Tiles[i] != null) {
+				Button Tile = Tiles[i];
+				int delay = 30 * i; //delay for tile
+
+//				Tile.animate().rotation(0).alpha(1)
+//						.setDuration(200).setStartDelay(delay).setInterpolator(linear);
+
+				AnimateFloatDelay(Tile, "rotation", 0, 400, delay);
+				AnimateFloatDelay(Tile, "alpha", 1, 400, 100 + delay);
+			}
+
+	}
+
+	void AnimateBaseNotChanged(){}
+
+	void AnimatePuzzleMatched(){
+		for (int i = 0; i < Tiles.length; i++)
+			if (Tiles[i] != null) {
+				Button Tile = Tiles[i];
+				Tile.setBackgroundTintList(ColorStateList.valueOf(/*lawngreen*/0xFF7CFC00));
+			}
+
+	}
+
+	void AnimateTimeRunningOut()
+	{
+		for (int i = 0; i < Tiles.length; i++)
+			if (Tiles[i] != null) {
+				Button Tile = Tiles[i];
+				Tile.setBackgroundTintList(ColorStateList.valueOf(/*darkorange*/0xFFFF8C00));
+			}
+
+	}
+
+	void AnimateTimeOver(){
+		for (int i = 0; i < Tiles.length; i++)
+			if (Tiles[i] != null) {
+				Button Tile = Tiles[i];
+				Tile.setBackgroundTintList(ColorStateList.valueOf(/*red*/0xFFFF0000));
+			}
+
+	}
+
+	void AnimateNormalizeTilesColor(){
+		for (int i = 0; i < Tiles.length; i++)
+			if (Tiles[i] != null) {
+				Button Tile = Tiles[i];
+				Tile.setBackgroundTintList(ColorStateList.valueOf(TileFillNormalColor1));
+			}
+
+	}
+
+	void ShowDebug(){}
+
+//-------------------------------  Test different Animations   -----------------------------
+
+	public void ButtonDisappeareOnClick(View sender)
+	{
+		AnimateTilesDisappeare();
+	}
+
+	public void ButtonPlaceOnClick(View sender)
+	{
+		AnimateNormalizeTilesColor();
+		AnimatePrepareBeforePlace();
+		AnimatePlaceTilesFast();
+	}
+
+	public void ButtonTimeOverOnClick(View sender)
+	{
+		AnimateTimeOver();
+	}
+
+	public void ButtonTimeRunningOutOnClick(View sender)
+	{
+		AnimateTimeRunningOut();
+	}
+
+	public void ButtonPuzzleMatchedOnClick(View sender)
+	{
+		AnimatePuzzleMatched();
+	}
+
+//---------------------------  Realization of Property Animation   -----------------------------
+
+	ObjectAnimator AnimateFloatDelayWait(View Target, String PropertyName,
+	                                 float Value, long Duration_ms, long Delay_ms)
+	{
+		return AnimateFloatDelay(Target, PropertyName, Value, Duration_ms, Delay_ms, linear);
+	}
+
+	ObjectAnimator AnimateFloatDelay(View Target, String PropertyName,
+	   float Value, long Duration_ms, long Delay_ms)
+	{
+		return AnimateFloatDelay(Target, PropertyName, Value, Duration_ms, Delay_ms, linear);
+	}
+
+	ObjectAnimator AnimateFloatDelay(View Target, String PropertyName,
+      float Value, long Duration_ms, long Delay_ms,
+      TimeInterpolator AInterpolator/*, boolean DeleteWhenStopped, boolean WaitAnimationEnd*/)
+	{
+		ObjectAnimator objectAnimator	= ObjectAnimator.ofFloat(Target, PropertyName, Value);
+		objectAnimator.setDuration(Duration_ms);
+		objectAnimator.setStartDelay(Delay_ms);
+//		objectAnimator.setRepeatCount(1);
+//		objectAnimator.setRepeatMode(ObjectAnimator.REVERSE);
+		objectAnimator.setInterpolator(AInterpolator);
+		objectAnimator.start();
+		return objectAnimator;
+	}
 
 }
