@@ -2,23 +2,20 @@ package com.example.a15puzzle;
 
 import androidx.appcompat.app.AppCompatActivity;
 
-import android.animation.AnimatorSet;
+import android.animation.Animator;
 import android.animation.ArgbEvaluator;
 import android.animation.ObjectAnimator;
 import android.animation.TimeInterpolator;
 import android.animation.ValueAnimator;
+import android.animation.Animator.AnimatorListener;
 import android.content.res.ColorStateList;
 import android.os.Bundle;
-import android.graphics.Color;
 import android.os.Handler;
-import android.service.quicksettings.Tile;
 import android.util.Log;
 import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewGroup;
 import android.view.ViewGroup.LayoutParams;
-import android.view.animation.AccelerateInterpolator;
-import android.view.animation.DecelerateInterpolator;
 import android.view.animation.LinearInterpolator;
 import android.view.animation.PathInterpolator;
 import android.widget.Button;
@@ -34,12 +31,6 @@ public class MainActivity extends AppCompatActivity {
 		GameOver,
 		JustShuffled,
 		PuzzleMatched };
-
-//	public class Button extends androidx.appcompat.widget.AppCompatButton {
-//		public Button(Context context) {
-//			super(context);
-//		}
-//	}
 
 	int Base;
 	TMode Mode;
@@ -495,15 +486,16 @@ public class MainActivity extends AppCompatActivity {
 
 	}
 
-//	void closeEvent(QCloseEvent event)
-//	{
-//		if (! ClosingAnimation)
-//		{
-//			AnimateTilesDisappeare();
-//			ClosingAnimation = true;
-//		}
-//
-//	}
+@Override
+public void onBackPressed() {
+	if (! ClosingAnimation)
+	{
+		ClosingAnimation = true;
+		AnimateTilesDisappeare();
+		return;
+	}
+	finish();
+}
 
 //-------------------------------   Animations   -----------------------------
 	void CalcConsts()
@@ -571,7 +563,7 @@ public class MainActivity extends AppCompatActivity {
 
 	void AnimateTilesDisappeare()
 	{
-		Button LastTile;
+		Button LastTile = null;
 		for (int i = 0; i < Tiles.length; i++)
 			if (Tiles[i] != null)
 			{
@@ -595,6 +587,24 @@ public class MainActivity extends AppCompatActivity {
 
 				LastTile = Tile;
 			}
+
+//		Log.d("ClosingAnimation", " = " + ((Boolean)ClosingAnimation).toString() +
+//				" LastTile =" + ((LastTile == null)? "null": LastTile.toString())
+//		);
+
+		if (ClosingAnimation && (LastTile != null)) {
+
+			LastTile.animate().setListener(new AnimatorListener() {
+				@Override
+				public void onAnimationEnd(Animator animation) {
+					finish();
+				}
+
+				public void onAnimationStart(Animator animation) {}
+				public void onAnimationCancel(Animator animation) {}
+				public void onAnimationRepeat(Animator animation) {}
+			});
+		}
 
 	}
 
