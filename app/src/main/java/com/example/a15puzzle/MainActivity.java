@@ -16,6 +16,7 @@ import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewGroup;
 import android.view.ViewGroup.LayoutParams;
+import android.view.ViewTreeObserver;
 import android.view.animation.LinearInterpolator;
 import android.view.animation.PathInterpolator;
 import android.widget.Button;
@@ -40,11 +41,12 @@ public class MainActivity extends AppCompatActivity {
 	long TileSpacing;
 	long SpaceX, SpaceY;
 
-	int TileFillNormalColor1, TileFillNormalColor2;
+	int TileFillNormalColor1 = 0xFFFFE4C4; //bisque
+	int TileFillNormalColor2 = 0xFFABE024;
+
 	long LastResizeTime;
 	long LastTapTime;
 	boolean ClosingAnimation = false;
-	boolean GreenTiles;
 	int TimeRemaining;
 	int PanelDebugMaximumHeight;
 	int ResizeCount = 0;
@@ -119,21 +121,24 @@ public class MainActivity extends AppCompatActivity {
 
 		};
 
+		PanelClient.getViewTreeObserver().addOnGlobalLayoutListener(
+			new ViewTreeObserver.OnGlobalLayoutListener() {
+			@Override
+			public void onGlobalLayout() {
+				PanelClientResize();
+			}
+		});
 
-		TileFillNormalColor1 = 0xFFFFE4C4; //bisque
-		TileFillNormalColor2 = 0xFFABE024;
 
 		linear = new LinearInterpolator();
 		inBack = new PathInterpolator(0.6f, -0.28f, 0.735f, 0.045f);
 		outBack = new PathInterpolator(0.175f, 0.885f, 0.32f, 1.275f);
 		outExpo = new PathInterpolator(0.19f, 1f, 0.22f, 1f);
 
-//  PanelClient  background-color: rgb(244, 244, 244);
-
 		RandomGen = new Random();
 		SetBase(4);
-
 	}
+
 
 	void  SetMode(TMode Value)
 	{
@@ -451,51 +456,37 @@ public class MainActivity extends AppCompatActivity {
 		TextTime.setText(String.format("%1$d:%2$02d", Min, Sec));
 	}
 
-// resizeEvent was realized for PanelClient
-//void resizeEvent(QResizeEvent *event)
-//{
-//		QMainWindow.resizeEvent(event);
-//		TimerResize.stop();
-//		TimerResize.start();
 
-//				TimerTime.cancel();
-//				TimerTime.schedule(TimerTimeTask, 0, 1000);
-
-//		TimerResize.removeCallbacks(TimerResizeRunnable);
-//		TimerResize.postDelayed(TimerResizeRunnable, 1000);
-
-//}
-
+	void PanelClientResize()
+	{
+		TimerResize.removeCallbacks(TimerResizeRunnable);
+		TimerResize.postDelayed(TimerResizeRunnable, 200);
+	}
 
 
 	void TimerResizeTimer()
 	{
-		//		TimerResize.cancel();
 		TimerResize.removeCallbacks(TimerResizeRunnable);
 
 		long TimeFromLastResize_ms = System.currentTimeMillis() - LastResizeTime;
 
-//	qDebug() << QString("TimerResizeTimer	") << QDateTime.currentDateTime().toString("mm:ss:zzz");
-
 		if (TimeFromLastResize_ms > 1000)
 		{
-//			qDebug() << QString("AnimatePlaceTilesFast	") << TimeFromLastResize_ms;
 			AnimatePlaceTilesFast();
 			LastResizeTime = System.currentTimeMillis();
 		}
-
 	}
 
-@Override
-public void onBackPressed() {
-	if (! ClosingAnimation)
-	{
-		ClosingAnimation = true;
-		AnimateTilesDisappeare();
-		return;
+	@Override
+	public void onBackPressed() {
+		if (! ClosingAnimation)
+		{
+			ClosingAnimation = true;
+			AnimateTilesDisappeare();
+			return;
+		}
+		finish();
 	}
-	finish();
-}
 
 //-------------------------------   Animations   -----------------------------
 	void CalcConsts()
