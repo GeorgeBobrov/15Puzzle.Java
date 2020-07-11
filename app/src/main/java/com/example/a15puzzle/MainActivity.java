@@ -1,5 +1,6 @@
 package com.example.a15puzzle;
 
+import androidx.annotation.ColorInt;
 import androidx.appcompat.app.AppCompatActivity;
 
 import android.animation.Animator;
@@ -9,6 +10,7 @@ import android.animation.TimeInterpolator;
 import android.animation.ValueAnimator;
 import android.animation.Animator.AnimatorListener;
 import android.content.res.ColorStateList;
+import android.graphics.LinearGradient;
 import android.os.Bundle;
 import android.os.Handler;
 import android.util.Log;
@@ -36,13 +38,13 @@ public class MainActivity extends AppCompatActivity {
 	int Base;
 	TMode Mode;
 
-	Button[] Tiles;
+	Button[] Tiles = new Button[0];
 	long TileSize;
 	long TileSpacing;
 	long SpaceX, SpaceY;
 
-	int TileFillNormalColor1 = 0xFFFFE4C4; //bisque
-	int TileFillNormalColor2 = 0xFFABE024;
+	@ColorInt int TileFillNormalColor1 = 0xFFFFE4C4; //bisque
+	@ColorInt int TileFillNormalColor2 = 0xFFABE024;
 
 	long LastResizeTime;
 	long LastTapTime;
@@ -51,14 +53,20 @@ public class MainActivity extends AppCompatActivity {
 	int PanelDebugMaximumHeight;
 	int ResizeCount = 0;
 
-	Handler TimerTime;
-	Handler TimerResize;
-	Handler TimerCreateTiles;
-	Runnable TimerTimeRunnable;
-	Runnable TimerResizeRunnable;
-	Runnable TimerCreateTilesRunnable;
+	Handler TimerTime = new android.os.Handler();
+	Handler TimerResize = new android.os.Handler();
+	Handler TimerCreateTiles = new android.os.Handler();
+	Runnable TimerTimeRunnable = new Runnable() {
+		public void run()	{ TimerTimeTimer(); }
+	};
+	Runnable TimerResizeRunnable = new Runnable() {
+		public void run()	{ TimerResizeTimer(); }
+	};
+	Runnable TimerCreateTilesRunnable = new Runnable() {
+		public void run()	{ TimerCreateTilesTimer(); }
+	};
 
-	private static Random RandomGen;
+	private static Random RandomGen = new Random();
 
 
 	final float MaxMoveAniDuration = 150;
@@ -66,13 +74,27 @@ public class MainActivity extends AppCompatActivity {
 
 	TextView TextTime;
 	RelativeLayout PanelClient;
-	View.OnClickListener TileClickListener;
-	View.OnTouchListener TileTouchListener;
 
-	TimeInterpolator linear;
-	TimeInterpolator inBack;
-	TimeInterpolator outBack;
-	TimeInterpolator outExpo;
+	View.OnClickListener TileClickListener = new View.OnClickListener() {
+		@Override
+		public void onClick(View sender) { OnTilePressed(sender); }
+	};
+
+	View.OnTouchListener TileTouchListener = new View.OnTouchListener() {
+		@Override
+		public boolean onTouch(View sender, MotionEvent event) {
+			if (event.getAction() == MotionEvent.ACTION_DOWN){
+				OnTilePressed(sender);
+				return true;
+			}
+			return false;
+		}
+	};
+
+	TimeInterpolator linear = new LinearInterpolator();
+	TimeInterpolator inBack = new PathInterpolator(0.6f, -0.28f, 0.735f, 0.045f);
+	TimeInterpolator outBack = new PathInterpolator(0.175f, 0.885f, 0.32f, 1.275f);
+	TimeInterpolator outExpo = new PathInterpolator(0.19f, 1f, 0.22f, 1f);
 
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
@@ -80,46 +102,9 @@ public class MainActivity extends AppCompatActivity {
 		setContentView(R.layout.activity_main);
 
 		PanelClient = findViewById(R.id.PanelClient);
-//		mStartButton = findViewById(R.id.buttonStart);
 		TextTime = findViewById(R.id.TextTime);
 
-		Tiles = new Button[0];
-
-
-		TimerTime = new android.os.Handler();
-		TimerResize = new android.os.Handler();
-		TimerCreateTiles = new android.os.Handler();
-
-		TimerTimeRunnable = new Runnable() {
-			public void run()	{ TimerTimeTimer(); }
-		};
-
-		TimerResizeRunnable = new Runnable() {
-			public void run()	{ TimerResizeTimer(); }
-		};
-
-		TimerCreateTilesRunnable = new Runnable() {
-			public void run()	{ TimerCreateTilesTimer(); }
-		};
-
 		LastResizeTime = System.currentTimeMillis();   //To prevent resize on start on Android
-
-		TileClickListener = new View.OnClickListener() {
-			@Override
-			public void onClick(View sender) { OnTilePressed(sender); }
-		};
-
-		TileTouchListener = new View.OnTouchListener() {
-			@Override
-			public boolean onTouch(View sender, MotionEvent event) {
-				if (event.getAction() == MotionEvent.ACTION_DOWN){
-					OnTilePressed(sender);
-					return true;
-				}
-				return false;
-			}
-
-		};
 
 		PanelClient.getViewTreeObserver().addOnGlobalLayoutListener(
 			new ViewTreeObserver.OnGlobalLayoutListener() {
@@ -129,13 +114,6 @@ public class MainActivity extends AppCompatActivity {
 			}
 		});
 
-
-		linear = new LinearInterpolator();
-		inBack = new PathInterpolator(0.6f, -0.28f, 0.735f, 0.045f);
-		outBack = new PathInterpolator(0.175f, 0.885f, 0.32f, 1.275f);
-		outExpo = new PathInterpolator(0.19f, 1f, 0.22f, 1f);
-
-		RandomGen = new Random();
 		SetBase(4);
 	}
 
@@ -170,12 +148,12 @@ public class MainActivity extends AppCompatActivity {
 		Base = Value;
 		SetMaxTime();
 
-		int dalay;
+		int delay;
 		if ( Tiles.length > 0)
-			dalay = (520 + 30 * Tiles.length);
+			delay = (520 + 30 * Tiles.length);
 		else
-			dalay = (200);
-		TimerCreateTiles.postDelayed(TimerCreateTilesRunnable, dalay);
+			delay = (200);
+		TimerCreateTiles.postDelayed(TimerCreateTilesRunnable, delay);
 	}
 
 
@@ -358,7 +336,7 @@ public class MainActivity extends AppCompatActivity {
 		for (int i = 0; i < Tiles.length; i++)
 			if (Tiles[i] != null)
 			{
-				int TextNumber = Integer.parseInt( Tiles[i].getText().toString());
+				int TextNumber = Integer.parseInt( Tiles[i].getText().toString() );
 
 				if ((TextNumber - 1) != ActualPosition(Tiles[i]))
 				{
@@ -445,7 +423,7 @@ public class MainActivity extends AppCompatActivity {
 		}
 
 
-		}
+	}
 
 
 	void SetMaxTime()
@@ -498,7 +476,7 @@ public class MainActivity extends AppCompatActivity {
 		{
 			SpaceX = Math.round(((float)Width) / 20);
 			TileSize = Math.round(((float)(Width - SpaceX * 2)) / Base);
-			SpaceY = SpaceX + Math.round(((double)(Height - Width)) / 2);
+			SpaceY = SpaceX + Math.round(((float)(Height - Width)) / 2);
 		}
 		else
 		{
