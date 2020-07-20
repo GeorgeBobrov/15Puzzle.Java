@@ -10,7 +10,6 @@ import android.animation.TimeInterpolator;
 import android.animation.ValueAnimator;
 import android.animation.Animator.AnimatorListener;
 import android.content.res.ColorStateList;
-import android.graphics.LinearGradient;
 import android.os.Bundle;
 import android.os.Handler;
 import android.util.Log;
@@ -30,57 +29,57 @@ import java.util.Random;
 
 public class MainActivity extends AppCompatActivity {
 
-	enum TMode {Game,
+	enum Mode {Game,
 		GameOver,
 		JustShuffled,
 		PuzzleMatched };
 
-	int Base;
-	TMode Mode;
+	int base;
+	Mode mode;
 
-	Button[] Tiles = new Button[0];
-	long TileSize;
-	long TileSpacing;
-	long SpaceX, SpaceY;
+	Button[] tiles = new Button[0];
+	long tileSize;
+	long tileSpacing;
+	long spaceX, spaceY;
 
-	@ColorInt int TileFillNormalColor1 = 0xFFFFE4C4; //bisque
-	@ColorInt int TileFillNormalColor2 = 0xFFABE024;
+	@ColorInt int tileFillNormalColor1 = 0xFFFFE4C4; //bisque
+	@ColorInt int tileFillNormalColor2 = 0xFFABE024;
 
-	long LastResizeTime;
-	long LastTapTime;
-	boolean ClosingAnimation = false;
-	int TimeRemaining;
-	int PanelDebugMaximumHeight;
-	int ResizeCount = 0;
+	long lastResizeTime;
+	long lastTapTime;
+	boolean closingAnimation = false;
+	int timeRemaining;
+	int panelDebugMaximumHeight;
+	int resizeCount = 0;
 
-	Handler TimerTime = new android.os.Handler();
-	Handler TimerResize = new android.os.Handler();
-	Handler TimerCreateTiles = new android.os.Handler();
-	Runnable TimerTimeRunnable = new Runnable() {
-		public void run()	{ TimerTimeTimer(); }
+	Handler timerTime = new android.os.Handler();
+	Handler timerResize = new android.os.Handler();
+	Handler timerCreateTiles = new android.os.Handler();
+	Runnable timerTimeRunnable = new Runnable() {
+		public void run()	{ timerTimeTimer(); }
 	};
-	Runnable TimerResizeRunnable = new Runnable() {
-		public void run()	{ TimerResizeTimer(); }
+	Runnable timerResizeRunnable = new Runnable() {
+		public void run()	{ timerResizeTimer(); }
 	};
-	Runnable TimerCreateTilesRunnable = new Runnable() {
-		public void run()	{ TimerCreateTilesTimer(); }
+	Runnable timerCreateTilesRunnable = new Runnable() {
+		public void run()	{ timerCreateTilesTimer(); }
 	};
 
-	private static Random RandomGen = new Random();
+	private static Random randomGen = new Random();
 
 
-	final float MaxMoveAniDuration = 150;
-	final float MinMoveAniDuration = 1;
+	final float maxMoveAniDuration = 150;
+	final float minMoveAniDuration = 1;
 
-	TextView TextTime;
-	RelativeLayout PanelClient;
+	TextView textTime;
+	RelativeLayout panelClient;
 
-	View.OnClickListener TileClickListener = new View.OnClickListener() {
+	View.OnClickListener tileClickListener = new View.OnClickListener() {
 		@Override
 		public void onClick(View sender) { OnTilePressed(sender); }
 	};
 
-	View.OnTouchListener TileTouchListener = new View.OnTouchListener() {
+	View.OnTouchListener tileTouchListener = new View.OnTouchListener() {
 		@Override
 		public boolean onTouch(View sender, MotionEvent event) {
 			if (event.getAction() == MotionEvent.ACTION_DOWN){
@@ -101,135 +100,135 @@ public class MainActivity extends AppCompatActivity {
 		super.onCreate(savedInstanceState);
 		setContentView(R.layout.activity_main);
 
-		PanelClient = findViewById(R.id.PanelClient);
-		TextTime = findViewById(R.id.TextTime);
+		panelClient = findViewById(R.id.panelClient);
+		textTime = findViewById(R.id.textTime);
 
-		LastResizeTime = System.currentTimeMillis();   //To prevent resize on start on Android
+		lastResizeTime = System.currentTimeMillis();   //To prevent resize on start on Android
 
-		PanelClient.getViewTreeObserver().addOnGlobalLayoutListener(
+		panelClient.getViewTreeObserver().addOnGlobalLayoutListener(
 			new ViewTreeObserver.OnGlobalLayoutListener() {
 			@Override
 			public void onGlobalLayout() {
-				PanelClientResize();
+				panelClientResize();
 			}
 		});
 
-		SetBase(4);
+		setBase(4);
 	}
 
 
-	void  SetMode(TMode Value)
+	void  setMode(Mode value)
 	{
-		Mode = Value;
-		if (Mode == TMode.Game)
-			TimerTime.postDelayed(TimerTimeRunnable, 1000);
+		mode = value;
+		if (mode == Mode.Game)
+			timerTime.postDelayed(timerTimeRunnable, 1000);
 		else
-			TimerTime.removeCallbacks(TimerTimeRunnable);
+			timerTime.removeCallbacks(timerTimeRunnable);
 	}
 
-	public void ButtonBaseOnClick(View sender)
+	public void buttonBaseOnClick(View sender)
 	{
-		Button SenderButton = (Button) sender;
-		char chrBase = SenderButton.getText().charAt(0);
+		Button senderButton = (Button) sender;
+		char chrBase = senderButton.getText().charAt(0);
 		String strBase = Character.toString(chrBase);
-		int LBase = Integer.parseInt(strBase);
-		SetBase(LBase);
+		int lBase = Integer.parseInt(strBase);
+		setBase(lBase);
 	}
 
-	void SetBase(int Value)
+	void setBase(int value)
 	{
-		if (Value == Base)
+		if (value == base)
 		{
-			AnimateBaseNotChanged();
+			animateBaseNotChanged();
 			return;
 		}
-		SetMode(TMode.GameOver);
-		AnimateTilesDisappeare();
-		Base = Value;
-		SetMaxTime();
+		setMode(Mode.GameOver);
+		animateTilesDisappeare();
+		base = value;
+		setMaxTime();
 
 		int delay;
-		if ( Tiles.length > 0)
-			delay = (520 + 30 * Tiles.length);
+		if ( tiles.length > 0)
+			delay = (520 + 30 * tiles.length);
 		else
 			delay = (200);
-		TimerCreateTiles.postDelayed(TimerCreateTilesRunnable, delay);
+		timerCreateTiles.postDelayed(timerCreateTilesRunnable, delay);
 	}
 
 
 
-	void TimerCreateTilesTimer()
+	void timerCreateTilesTimer()
 	{
-		CreateTiles();
-		AnimatePrepareBeforePlace();
-		AnimatePlaceTilesFast();
+		createTiles();
+		animatePrepareBeforePlace();
+		animatePlaceTilesFast();
 	}
 
 
 
-	void CreateTiles()
+	void createTiles()
 	{
-		for (int i = 0; i < Tiles.length; i++)
-			if (Tiles[i] != null)
+		for (int i = 0; i < tiles.length; i++)
+			if (tiles[i] != null)
 			{
-//				TGradientAnimation *GradientAni = (TGradientAnimation*)Tiles[i].property("GradientAni").value<void *>() ;
-				((ViewGroup) Tiles[i].getParent()).removeView(Tiles[i]);
-				Tiles[i] = null;
+//				GradientAnimation *gradientAni = (GradientAnimation*)tiles[i].property("gradientAni").value<void *>() ;
+				((ViewGroup) tiles[i].getParent()).removeView(tiles[i]);
+				tiles[i] = null;
 			}
 
-		Tiles = new Button[Base * Base];
-		for (int i = 0; i < Tiles.length - 1; i++)
-			if (Tiles[i] == null)
+		tiles = new Button[base * base];
+		for (int i = 0; i < tiles.length - 1; i++)
+			if (tiles[i] == null)
 			{
-				final Button NewTile;
+				final Button newTile;
 
-				NewTile = (Button) new Button(this);
+				newTile = (Button) new Button(this);
 
-//				NewTile.setOnClickListener(TileClickListener);
-				NewTile.setOnTouchListener(TileTouchListener);
+//				newTile.setOnClickListener(tileClickListener);
+				newTile.setOnTouchListener(tileTouchListener);
 
-				NewTile.setText(String.valueOf(i + 1));
+				newTile.setText(String.valueOf(i + 1));
 
 				ValueAnimator colorAnimation = new ValueAnimator();
 				colorAnimation.addUpdateListener(new ValueAnimator.AnimatorUpdateListener() {
 
 					@Override
 					public void onAnimationUpdate(ValueAnimator animator) {
-						NewTile.setBackgroundTintList(ColorStateList.valueOf((int) animator.getAnimatedValue()));
+						newTile.setBackgroundTintList(ColorStateList.valueOf((int) animator.getAnimatedValue()));
 					}
 
 				});
 
-				NewTile.setTag(colorAnimation);
+				newTile.setTag(colorAnimation);
 
 
-//				NewTile.setStyleSheet(GenerateTileStyleSheet(TileFillNormalColor1, TileFillNormalColor2));
-//				GradientAni.SetCurColors(TileFillNormalColor1, TileFillNormalColor2);
-				NewTile.setBackgroundTintList(ColorStateList.valueOf(TileFillNormalColor1));
+//				newTile.setStyleSheet(generateTileStyleSheet(tileFillNormalColor1, tileFillNormalColor2));
+//				gradientAni.setCurColors(tileFillNormalColor1, tileFillNormalColor2);
+				newTile.setBackgroundTintList(ColorStateList.valueOf(tileFillNormalColor1));
 
-				NewTile.setLayoutParams(new LayoutParams(100,100));
+				newTile.setLayoutParams(new LayoutParams(100,100));
 
-				PanelClient.addView(NewTile);
+				panelClient.addView(newTile);
 
-//			NewTile.SendToBack;
-				Tiles[i] = NewTile;
+//			newTile.SendToBack;
+				tiles[i] = newTile;
 			}
 
-		if (Tiles[Tiles.length - 1] != null)
-			Tiles[Tiles.length - 1] = null;
+		if (tiles[tiles.length - 1] != null)
+			tiles[tiles.length - 1] = null;
 	}
 
 
-	int ind(int Row, int Col)
+	int ind(int row, int col)
 	{
-		return Row * Base + Col;
+		return row * base + col;
 	}
 
 
-	int ActualPosition(Button ATile)
+	int actualPosition(Button tile)
 	{
-		for (int i = 0; i < Tiles.length; i++)
-			if (Tiles[i] == ATile)
+		for (int i = 0; i < tiles.length; i++)
+			if (tiles[i] == tile)
 				return i;
 		return 0;
 	}
@@ -237,333 +236,333 @@ public class MainActivity extends AppCompatActivity {
 
 	void OnTilePressed(View sender)
 	{
-		Button SenderTile = (Button) sender;
-		if (Mode == TMode.JustShuffled)
-			SetMode(TMode.Game);
-		boolean WasMoved = TryMoveTile(ActualPosition(SenderTile), MaxMoveAniDuration, false);
-		if (WasMoved)
-			CheckPuzzleMatched();
+		Button senderTile = (Button) sender;
+		if (mode == Mode.JustShuffled)
+			setMode(Mode.Game);
+		boolean wasMoved = tryMoveTile(actualPosition(senderTile), maxMoveAniDuration, false);
+		if (wasMoved)
+			checkPuzzleMatched();
 	}
 
 
-	boolean TryMoveTile(int TilePosition, float MoveAniDuration, boolean WaitAnimationEnd)
+	boolean tryMoveTile(int tilePosition, float moveAniDuration, boolean waitAnimationEnd)
 	{
-		boolean WasMoved = false;
+		boolean wasMoved = false;
 
-		int ColPressed = TilePosition % Base;
-		int RowPressed = TilePosition / Base;
+		int colPressed = tilePosition % base;
+		int rowPressed = tilePosition / base;
 
-		for (int Row = 0; Row < Base; Row++)
-			if (Tiles[ind(Row, ColPressed)] == null)
+		for (int row = 0; row < base; row++)
+			if (tiles[ind(row, colPressed)] == null)
 			{
-				int RowNoTile = Row;
-				if (RowNoTile > RowPressed) //Move tiles down
-					for (int RowToMove = RowNoTile - 1; RowToMove >= RowPressed; RowToMove--)
+				int rowNoTile = row;
+				if (rowNoTile > rowPressed) //Move tiles down
+					for (int rowToMove = rowNoTile - 1; rowToMove >= rowPressed; rowToMove--)
 					{
-						MoveTile(ind(RowToMove, ColPressed), ind(RowToMove + 1, ColPressed), MoveAniDuration, WaitAnimationEnd);
-						WasMoved = true;
+						moveTile(ind(rowToMove, colPressed), ind(rowToMove + 1, colPressed), moveAniDuration, waitAnimationEnd);
+						wasMoved = true;
 					}
-				if (RowPressed > RowNoTile) //Move tiles up
-					for (int RowToMove = RowNoTile + 1; RowToMove <= RowPressed; RowToMove++)
+				if (rowPressed > rowNoTile) //Move tiles up
+					for (int rowToMove = rowNoTile + 1; rowToMove <= rowPressed; rowToMove++)
 					{
-						MoveTile(ind(RowToMove, ColPressed), ind(RowToMove - 1, ColPressed), MoveAniDuration, WaitAnimationEnd);
-						WasMoved = true;
+						moveTile(ind(rowToMove, colPressed), ind(rowToMove - 1, colPressed), moveAniDuration, waitAnimationEnd);
+						wasMoved = true;
 					}
 			}
-		if (! WasMoved)
-			for (int Col = 0; Col < Base; Col++)
-				if (Tiles[ind(RowPressed, Col)] == null)
+		if (! wasMoved)
+			for (int col = 0; col < base; col++)
+				if (tiles[ind(rowPressed, col)] == null)
 				{
-					int ColNoTile = Col;
-					if (ColNoTile > ColPressed) //Move tiles right
-						for (int ColToMove = ColNoTile - 1; ColToMove >= ColPressed; ColToMove--)
+					int colNoTile = col;
+					if (colNoTile > colPressed) //Move tiles right
+						for (int colToMove = colNoTile - 1; colToMove >= colPressed; colToMove--)
 						{
-							MoveTile(ind(RowPressed, ColToMove), ind(RowPressed, ColToMove + 1), MoveAniDuration, WaitAnimationEnd);
-							WasMoved = true;
+							moveTile(ind(rowPressed, colToMove), ind(rowPressed, colToMove + 1), moveAniDuration, waitAnimationEnd);
+							wasMoved = true;
 						}
-					if (ColPressed > ColNoTile) //Move tiles left
-						for (int ColToMove = ColNoTile + 1; ColToMove <= ColPressed; ColToMove++)
+					if (colPressed > colNoTile) //Move tiles left
+						for (int colToMove = colNoTile + 1; colToMove <= colPressed; colToMove++)
 						{
-							MoveTile(ind(RowPressed, ColToMove), ind(RowPressed, ColToMove - 1), MoveAniDuration, WaitAnimationEnd);
-							WasMoved = true;
+							moveTile(ind(rowPressed, colToMove), ind(rowPressed, colToMove - 1), moveAniDuration, waitAnimationEnd);
+							wasMoved = true;
 						}
 				}
 
-		return WasMoved;
+		return wasMoved;
 	}
 
-	void MoveTile(int OldPosition, int NewPosition, float MoveAniDuration, boolean WaitAnimationEnd)
+	void moveTile(int oldPosition, int newPosition, float moveAniDuration, boolean waitAnimationEnd)
 	{
-		Button temp = Tiles[NewPosition];
-		Tiles[NewPosition] = Tiles[OldPosition];
-		Tiles[OldPosition] = temp;
+		Button temp = tiles[newPosition];
+		tiles[newPosition] = tiles[oldPosition];
+		tiles[oldPosition] = temp;
 
-		AnimateMoveTile(Tiles[NewPosition], MoveAniDuration, WaitAnimationEnd);
+		animateMoveTile(tiles[newPosition], moveAniDuration, waitAnimationEnd);
 	};
 
 
-	void AnimateMoveTile(Button ATile, float MoveAniDuration, boolean WaitAnimationEnd)
+	void animateMoveTile(Button tile, float moveAniDuration, boolean waitAnimationEnd)
 	{
-		int ActPos = ActualPosition(ATile);
-		int NewCol = ActPos % Base;
-		int NewRow = ActPos / Base;
+		int actPos = actualPosition(tile);
+		int newCol = actPos % base;
+		int newRow = actPos / base;
 
-		float OffsetOnScaledTile = (TileSize - ATile.getLayoutParams().width) / 2.0f;
+		float offsetOnScaledTile = (tileSize - tile.getLayoutParams().width) / 2.0f;
 
-		long X = SpaceX + Math.round(NewCol * (TileSize + TileSpacing) + OffsetOnScaledTile);
-		long Y = SpaceY + Math.round(NewRow * (TileSize + TileSpacing) + OffsetOnScaledTile);
+		long x = spaceX + Math.round(newCol * (tileSize + tileSpacing) + offsetOnScaledTile);
+		long y = spaceY + Math.round(newRow * (tileSize + tileSpacing) + offsetOnScaledTile);
 
-		if (MoveAniDuration > 0)
+		if (moveAniDuration > 0)
 		{
-//			AnimatePropertyDelay(ATile, "geometry", geometry, MoveAniDuration, 0, QEasingCurve.OutExpo, true, WaitAnimationEnd);
+//			animatePropertyDelay(tile, "geometry", geometry, moveAniDuration, 0, QEasingCurve.OutExpo, true, waitAnimationEnd);
 
-			ATile.animate().translationX(X).translationY(Y)
-					.setDuration((long) MoveAniDuration).setStartDelay(0)
+			tile.animate().translationX(x).translationY(y)
+					.setDuration((long) moveAniDuration).setStartDelay(0)
 					.setInterpolator(outExpo);
 
 		}
 		else
 		{
-			ATile.setTranslationX(X);
-			ATile.setTranslationY(Y);
+			tile.setTranslationX(x);
+			tile.setTranslationY(y);
 		}
 	}
 
 
-	void CheckPuzzleMatched()
+	void checkPuzzleMatched()
 	{
-		boolean LPuzzleMatched = true;
-		for (int i = 0; i < Tiles.length; i++)
-			if (Tiles[i] != null)
+		boolean puzzleMatched = true;
+		for (int i = 0; i < tiles.length; i++)
+			if (tiles[i] != null)
 			{
-				int TextNumber = Integer.parseInt( Tiles[i].getText().toString() );
+				int textNumber = Integer.parseInt( tiles[i].getText().toString() );
 
-				if ((TextNumber - 1) != ActualPosition(Tiles[i]))
+				if ((textNumber - 1) != actualPosition(tiles[i]))
 				{
-					LPuzzleMatched = false;
+					puzzleMatched = false;
 					break;
 				}
 			}
 
-		if (LPuzzleMatched && (Mode == TMode.Game))
+		if (puzzleMatched && (mode == Mode.Game))
 		{
-			SetMode(TMode.PuzzleMatched);
-			AnimatePuzzleMatched();
+			setMode(Mode.PuzzleMatched);
+			animatePuzzleMatched();
 		}
-		if ((! LPuzzleMatched) && ((Mode == TMode.PuzzleMatched) || (Mode == TMode.JustShuffled)))
+		if ((! puzzleMatched) && ((mode == Mode.PuzzleMatched) || (mode == Mode.JustShuffled)))
 		{
-			AnimateNormalizeTilesColor();
-			if (Mode == TMode.PuzzleMatched)
-				SetMode(TMode.GameOver);
+			animateNormalizeTilesColor();
+			if (mode == Mode.PuzzleMatched)
+				setMode(Mode.GameOver);
 		}
 	}
 
 
 
-	public void ButtonShuffleOnClick(View sender)
+	public void buttonShuffleOnClick(View sender)
 	{
-		AnimateNormalizeTilesColor();
+		animateNormalizeTilesColor();
 
-		int NewI = 0;
-		int MoveCount = Tiles.length * Tiles.length;
-		float MoveAniDuration = MaxMoveAniDuration;
-		for (int i = 1; i <= MoveCount; i++)
+		int newI = 0;
+		int moveCount = tiles.length * tiles.length;
+		float moveAniDuration = maxMoveAniDuration;
+		for (int i = 1; i <= moveCount; i++)
 		{
 			if (i <= 10)
-				MoveAniDuration = MinMoveAniDuration + (MaxMoveAniDuration * (1 - ((i) / 10.0f)));
-			if (i >= MoveCount - 10)
-				MoveAniDuration = MinMoveAniDuration + ((MaxMoveAniDuration / 2) * (1 - ((MoveCount - i) / 10.0f)));
-			if ((i > 20) && (i < MoveCount - 20))
+				moveAniDuration = minMoveAniDuration + (maxMoveAniDuration * (1 - ((i) / 10.0f)));
+			if (i >= moveCount - 10)
+				moveAniDuration = minMoveAniDuration + ((maxMoveAniDuration / 2) * (1 - ((moveCount - i) / 10.0f)));
+			if ((i > 20) && (i < moveCount - 20))
 				if ((i % 10) == 0)
-					MoveAniDuration = MinMoveAniDuration;
+					moveAniDuration = minMoveAniDuration;
 				else
-					MoveAniDuration = 0;
+					moveAniDuration = 0;
 
-			boolean WasMoved;
+			boolean wasMoved;
 			do
 			{
-				NewI = RandomGen.nextInt(Tiles.length);
-				WasMoved =  TryMoveTile(NewI, /*MoveAniDuration*/0, true);
+				newI = randomGen.nextInt(tiles.length);
+				wasMoved =  tryMoveTile(newI, /*moveAniDuration*/0, true);
 			}
-			while (! WasMoved);
+			while (! wasMoved);
 		}
-		SetMaxTime();
-//  StopBlinkShuffle();
+		setMaxTime();
+//  stopBlinkShuffle();
 
-		SetMode(TMode.JustShuffled);
-		CheckPuzzleMatched();
+		setMode(Mode.JustShuffled);
+		checkPuzzleMatched();
 	}
 
 
-	void TimerTimeTimer()
+	void timerTimeTimer()
 	{
-		Log.d("Timer", "TimerTimeTimer");
+		Log.d("Timer", "timerTimeTimer");
 
-		TimeRemaining = TimeRemaining - 1;
+		timeRemaining = timeRemaining - 1;
 
-		int Sec = TimeRemaining % 60;
-		int Min = TimeRemaining / 60;
+		int sec = timeRemaining % 60;
+		int min = timeRemaining / 60;
 
-		TextTime.setText(String.format("%1$d:%2$02d", Min, Sec));
+		textTime.setText(String.format("%1$d:%2$02d", min, sec));
 
-		if (TimeRemaining == 0)
+		if (timeRemaining == 0)
 		{
-			SetMode(TMode.GameOver);
-			AnimateTimeOver();
-//		StartBlinkShuffle();
+			setMode(Mode.GameOver);
+			animateTimeOver();
+//		startBlinkShuffle();
 			return;
 		}
-		if (TimeRemaining <= 10)
-			AnimateTimeRunningOut();
+		if (timeRemaining <= 10)
+			animateTimeRunningOut();
 
-		if (Mode == TMode.Game) {
+		if (mode == Mode.Game) {
 
-			TimerTime.postDelayed(TimerTimeRunnable, 1000);
-			Log.d("Timer", "TimerTime.postDelayed(TimerTimeRunnable, 1000) in TimerTimeTimer");
+			timerTime.postDelayed(timerTimeRunnable, 1000);
+			Log.d("Timer", "timerTime.postDelayed(timerTimeRunnable, 1000) in timerTimeTimer");
 		}
 
 
 	}
 
 
-	void SetMaxTime()
+	void setMaxTime()
 	{
-		TimeRemaining = ((Base * Base * Base * Base) / 20) * 10;
-		int Sec = TimeRemaining % 60;
-		int Min = TimeRemaining / 60;
-		TextTime.setText(String.format("%1$d:%2$02d", Min, Sec));
+		timeRemaining = ((base * base * base * base) / 20) * 10;
+		int sec = timeRemaining % 60;
+		int min = timeRemaining / 60;
+		textTime.setText(String.format("%1$d:%2$02d", min, sec));
 	}
 
 
-	void PanelClientResize()
+	void panelClientResize()
 	{
-		TimerResize.removeCallbacks(TimerResizeRunnable);
-		TimerResize.postDelayed(TimerResizeRunnable, 200);
+		timerResize.removeCallbacks(timerResizeRunnable);
+		timerResize.postDelayed(timerResizeRunnable, 200);
 	}
 
 
-	void TimerResizeTimer()
+	void timerResizeTimer()
 	{
-		TimerResize.removeCallbacks(TimerResizeRunnable);
+		timerResize.removeCallbacks(timerResizeRunnable);
 
-		long TimeFromLastResize_ms = System.currentTimeMillis() - LastResizeTime;
+		long timeFromLastResize_ms = System.currentTimeMillis() - lastResizeTime;
 
-		if (TimeFromLastResize_ms > 1000)
+		if (timeFromLastResize_ms > 1000)
 		{
-			AnimatePlaceTilesFast();
-			LastResizeTime = System.currentTimeMillis();
+			animatePlaceTilesFast();
+			lastResizeTime = System.currentTimeMillis();
 		}
 	}
 
 	@Override
 	public void onBackPressed() {
-		if (! ClosingAnimation)
+		if (! closingAnimation)
 		{
-			ClosingAnimation = true;
-			AnimateTilesDisappeare();
+			closingAnimation = true;
+			animateTilesDisappeare();
 			return;
 		}
 		finish();
 	}
 
 //-------------------------------   Animations   -----------------------------
-	void CalcConsts()
+	void calcConsts()
 	{
-		int Height = (PanelClient.getMeasuredHeight());
-		int Width = (PanelClient.getMeasuredWidth());
+		int height = (panelClient.getMeasuredHeight());
+		int width = (panelClient.getMeasuredWidth());
 
-		if (Height > Width)
+		if (height > width)
 		{
-			SpaceX = Math.round(((float)Width) / 20);
-			TileSize = Math.round(((float)(Width - SpaceX * 2)) / Base);
-			SpaceY = SpaceX + Math.round(((float)(Height - Width)) / 2);
+			spaceX = Math.round(((float)width) / 20);
+			tileSize = Math.round(((float)(width - spaceX * 2)) / base);
+			spaceY = spaceX + Math.round(((float)(height - width)) / 2);
 		}
 		else
 		{
-			SpaceY = Math.round(((float)Height) / 20);
-			TileSize = Math.round(((float)(Height - SpaceY * 2)) / Base);
-			SpaceX = SpaceY + Math.round(((float)(Width - Height)) / 2);
+			spaceY = Math.round(((float)height) / 20);
+			tileSize = Math.round(((float)(height - spaceY * 2)) / base);
+			spaceX = spaceY + Math.round(((float)(width - height)) / 2);
 		}
-		TileSpacing = Math.round(TileSize * 0.06);
-		TileSize = Math.round(TileSize * 0.94);
-		SpaceX = SpaceX + Math.round(((float)TileSpacing) / 2);
-		SpaceY = SpaceY + Math.round(((float)TileSpacing) / 2);
+		tileSpacing = Math.round(tileSize * 0.06);
+		tileSize = Math.round(tileSize * 0.94);
+		spaceX = spaceX + Math.round(((float)tileSpacing) / 2);
+		spaceY = spaceY + Math.round(((float)tileSpacing) / 2);
 
 	}
 
-	void AnimatePlaceTilesFast()
+	void animatePlaceTilesFast()
 	{
-		CalcConsts();
+		calcConsts();
 		Log.d("Animate", "PlaceTilesFast");
-		for (int i = 0; i < Tiles.length; i++)
-			if (Tiles[i] != null)
+		for (int i = 0; i < tiles.length; i++)
+			if (tiles[i] != null)
 			{
-				Button Tile = Tiles[i];
+				Button tile = tiles[i];
 				int delay = 30 * i; //delay for tile
 
-				int Col = i % Base;
-				int Row = i / Base;
+				int col = i % base;
+				int row = i / base;
 
-				int width = Tile.getLayoutParams().width;
-				int height = Tile.getLayoutParams().height;
+				int width = tile.getLayoutParams().width;
+				int height = tile.getLayoutParams().height;
 
 				Log.d("Animate", String.format("width=%d, height=%d", width, height));
 
-				float ScaleX = ((float)TileSize) / width;
-				float ScaleY = ((float)TileSize) / height;
+				float scaleX = ((float)tileSize) / width;
+				float scaleY = ((float)tileSize) / height;
 
-				float OffsetOnScaledTile = (TileSize - width) / 2.0f;
+				float offsetOnScaledTile = (tileSize - width) / 2.0f;
 
-				long X = SpaceX + Math.round(Col * (width * ScaleX + TileSpacing) + OffsetOnScaledTile);
-				long Y = SpaceY + Math.round(Row * (height *ScaleY + TileSpacing) + OffsetOnScaledTile);
+				long x = spaceX + Math.round(col * (width * scaleX + tileSpacing) + offsetOnScaledTile);
+				long y = spaceY + Math.round(row * (height *scaleY + tileSpacing) + offsetOnScaledTile);
 
-//				Tile.animate().scaleX(ScaleX).scaleY(ScaleY)
-//						.translationX(X).translationY(Y)
+//				tile.animate().scaleX(scaleX).scaleY(scaleY)
+//						.translationX(x).translationY(y)
 //						.setDuration(100).setStartDelay(100l + delay).setInterpolator(linear);
-				Log.d("Animate", String.format("X=%d, Y=%d, ScaleX=%g, ScaleY=%g, ", X, Y, ScaleX, ScaleY));
+				Log.d("Animate", String.format("x=%d, y=%d, scaleX=%g, scaleY=%g, ", x, y, scaleX, scaleY));
 
-				AnimateFloatDelay(Tile, "scaleX", ScaleX, 200, 200 + delay);
-				AnimateFloatDelay(Tile, "scaleY", ScaleY, 200, 100 + delay);
-				AnimateFloatDelay(Tile, "translationX", X, 200, delay);
-				AnimateFloatDelay(Tile, "translationY", Y, 100, delay);
+				animateFloatDelay(tile, "scaleX", scaleX, 200, 200 + delay);
+				animateFloatDelay(tile, "scaleY", scaleY, 200, 100 + delay);
+				animateFloatDelay(tile, "translationX", x, 200, delay);
+				animateFloatDelay(tile, "translationY", y, 100, delay);
 			}
 
 	}
 
-	void AnimateTilesDisappeare()
+	void animateTilesDisappeare()
 	{
-		Button LastTile = null;
-		for (int i = 0; i < Tiles.length; i++)
-			if (Tiles[i] != null)
+		Button lastTile = null;
+		for (int i = 0; i < tiles.length; i++)
+			if (tiles[i] != null)
 			{
-				Button Tile = Tiles[i];
+				Button tile = tiles[i];
 				int delay = 30 * i; //delay for tile
 
-				long X = Math.round(Tile.getTranslationX() + ((TileSize) / 2.0));
-				long Y = Math.round(Tile.getTranslationY() + TileSize) ;
+				long x = Math.round(tile.getTranslationX() + ((tileSize) / 2.0));
+				long y = Math.round(tile.getTranslationY() + tileSize) ;
 
-				Tile.animate().scaleX(0.1f).scaleY(0.1f)
+				tile.animate().scaleX(0.1f).scaleY(0.1f)
 						.rotation(45.0f).alpha(0)
-						.translationX(X).translationY(Y)
+						.translationX(x).translationY(y)
 						.setDuration(400).setStartDelay(delay).setInterpolator(inBack);
 
-//				AnimateFloatDelay(Tile, "scaleX", 0.1f, 400, delay);
-//				AnimateFloatDelay(Tile, "scaleY", 0.1f, 400, delay);
-//				AnimateFloatDelay(Tile, "rotation", 45, 400, delay);
-//				AnimateFloatDelay(Tile, "translationY", Y, 400, delay, inBack);
-//				AnimateFloatDelay(Tile, "translationX", X, 400, delay);
-//				AnimateFloatDelay(Tile, "alpha", 0, 400, 100 + delay);
+//				animateFloatDelay(tile, "scaleX", 0.1f, 400, delay);
+//				animateFloatDelay(tile, "scaleY", 0.1f, 400, delay);
+//				animateFloatDelay(tile, "rotation", 45, 400, delay);
+//				animateFloatDelay(tile, "translationY", y, 400, delay, inBack);
+//				animateFloatDelay(tile, "translationX", x, 400, delay);
+//				animateFloatDelay(tile, "alpha", 0, 400, 100 + delay);
 
-				LastTile = Tile;
+				lastTile = tile;
 			}
 
-//		Log.d("ClosingAnimation", " = " + ((Boolean)ClosingAnimation).toString() +
-//				" LastTile =" + ((LastTile == null)? "null": LastTile.toString())
+//		Log.d("closingAnimation", " = " + ((Boolean)closingAnimation).toString() +
+//				" lastTile =" + ((lastTile == null)? "null": lastTile.toString())
 //		);
 
-		if (ClosingAnimation && (LastTile != null)) {
+		if (closingAnimation && (lastTile != null)) {
 
-			LastTile.animate().setListener(new AnimatorListener() {
+			lastTile.animate().setListener(new AnimatorListener() {
 				@Override
 				public void onAnimationEnd(Animator animation) {
 					finish();
@@ -577,75 +576,75 @@ public class MainActivity extends AppCompatActivity {
 
 	}
 
-	void AnimatePrepareBeforePlace()
+	void animatePrepareBeforePlace()
 	{
-		for (int i = 0; i < Tiles.length; i++)
-			if (Tiles[i] != null) {
-				Button Tile = Tiles[i];
+		for (int i = 0; i < tiles.length; i++)
+			if (tiles[i] != null) {
+				Button tile = tiles[i];
 
-				float ScaleX = ((float)TileSize) / Tile.getLayoutParams().width;
-				float ScaleY = ((float)TileSize) / Tile.getLayoutParams().height;
+				float scaleX = ((float)tileSize) / tile.getLayoutParams().width;
+				float scaleY = ((float)tileSize) / tile.getLayoutParams().height;
 
-				int Col = i % Base;
-				int Row = i / Base;
+				int col = i % base;
+				int row = i / base;
 
-				long X = SpaceX + Math.round(Col * (Tile.getLayoutParams().width * ScaleX + TileSpacing));
-				long Y = SpaceY + Math.round(Row * (Tile.getLayoutParams().height * ScaleY + TileSpacing));
+				long x = spaceX + Math.round(col * (tile.getLayoutParams().width * scaleX + tileSpacing));
+				long y = spaceY + Math.round(row * (tile.getLayoutParams().height * scaleY + tileSpacing));
 
-				Tile.setScaleX(0.5f);
-				Tile.setScaleY(0.5f);
+				tile.setScaleX(0.5f);
+				tile.setScaleY(0.5f);
 
-				Tile.setAlpha(0);
-				Tile.setRotation(45.0f);
-				Tile.setTranslationX(X + Math.round((TileSize) / 2.0));
-				Tile.setTranslationY(Y + TileSize);
+				tile.setAlpha(0);
+				tile.setRotation(45.0f);
+				tile.setTranslationX(x + Math.round((tileSize) / 2.0));
+				tile.setTranslationY(y + tileSize);
 
 			}
 
-		for (int i = 0; i < Tiles.length; i++)
-			if (Tiles[i] != null) {
-				Button Tile = Tiles[i];
+		for (int i = 0; i < tiles.length; i++)
+			if (tiles[i] != null) {
+				Button tile = tiles[i];
 				int delay = 30 * i; //delay for tile
 
-//				Tile.animate().rotation(0).alpha(1)
+//				tile.animate().rotation(0).alpha(1)
 //						.setDuration(200).setStartDelay(delay).setInterpolator(linear);
 
-				AnimateFloatDelay(Tile, "rotation", 0, 400, delay);
-				AnimateFloatDelay(Tile, "alpha", 1, 400, 100 + delay);
+				animateFloatDelay(tile, "rotation", 0, 400, delay);
+				animateFloatDelay(tile, "alpha", 1, 400, 100 + delay);
 			}
 
 	}
 
-	void AnimateBaseNotChanged()
+	void animateBaseNotChanged()
 	{
-		for (int i = 0; i < Tiles.length; i++)
-			if (Tiles[i] != null) {
-				Button Tile = Tiles[i];
+		for (int i = 0; i < tiles.length; i++)
+			if (tiles[i] != null) {
+				Button tile = tiles[i];
 				int delay = 30 * i; //delay for tile
 
-				float OrigScaleX = Tile.getScaleX();
-				float OrigScaleY = Tile.getScaleY();
+				float origScaleX = tile.getScaleX();
+				float origScaleY = tile.getScaleY();
 
-				AnimateFloatDelay(Tile, "scaleX", OrigScaleX / 2.0f, 300, delay, inBack);
-				AnimateFloatDelay(Tile, "scaleY", OrigScaleY / 2.0f, 300, delay, inBack);
+				animateFloatDelay(tile, "scaleX", origScaleX / 2.0f, 300, delay, inBack);
+				animateFloatDelay(tile, "scaleY", origScaleY / 2.0f, 300, delay, inBack);
 
-				AnimateFloatDelay(Tile, "scaleX", OrigScaleX, 300, 350 + delay, outBack);
-				AnimateFloatDelay(Tile, "scaleY", OrigScaleY, 300, 350 + delay, outBack);
+				animateFloatDelay(tile, "scaleX", origScaleX, 300, 350 + delay, outBack);
+				animateFloatDelay(tile, "scaleY", origScaleY, 300, 350 + delay, outBack);
 			}
 	}
 
-	void AnimatePuzzleMatched(){
-		for (int i = 0; i < Tiles.length; i++)
-			if (Tiles[i] != null) {
-				final Button Tile = Tiles[i];
+	void animatePuzzleMatched(){
+		for (int i = 0; i < tiles.length; i++)
+			if (tiles[i] != null) {
+				final Button tile = tiles[i];
 				int delay = 30 * i; //delay for tile
 
-				AnimateFloatDelay(Tile, "rotation", 360, 1000, 350, outBack);
+				animateFloatDelay(tile, "rotation", 360, 1000, 350, outBack);
 
-//				Tile.setBackgroundTintList(ColorStateList.valueOf(/*lawngreen*/0xFF7CFC00));
+//				tile.setBackgroundTintList(colorStateList.valueOf(/*lawngreen*/0xFF7CFC00));
 
-				ValueAnimator colorAnimation = (ValueAnimator) Tile.getTag();
-				int colorFrom = Tile.getBackgroundTintList().getDefaultColor();
+				ValueAnimator colorAnimation = (ValueAnimator) tile.getTag();
+				int colorFrom = tile.getBackgroundTintList().getDefaultColor();
 				int colorTo = /*lawngreen*/0xFF7CFC00;
 				colorAnimation.setObjectValues(colorFrom, colorTo);
 				colorAnimation.setEvaluator(new ArgbEvaluator());
@@ -657,16 +656,16 @@ public class MainActivity extends AppCompatActivity {
 
 	}
 
-	void AnimateTimeRunningOut()
+	void animateTimeRunningOut()
 	{
-		for (int i = 0; i < Tiles.length; i++)
-			if (Tiles[i] != null) {
-				final Button Tile = Tiles[i];
+		for (int i = 0; i < tiles.length; i++)
+			if (tiles[i] != null) {
+				final Button tile = tiles[i];
 
-//				Tile.setBackgroundTintList(ColorStateList.valueOf(/*darkorange*/0xFFFF8C00));
+//				tile.setBackgroundTintList(colorStateList.valueOf(/*darkorange*/0xFFFF8C00));
 
-				ValueAnimator colorAnimation = (ValueAnimator) Tile.getTag();
-				int colorFrom = Tile.getBackgroundTintList().getDefaultColor();
+				ValueAnimator colorAnimation = (ValueAnimator) tile.getTag();
+				int colorFrom = tile.getBackgroundTintList().getDefaultColor();
 				int colorTo = /*darkorange*/0xFFFF8C00;
 				colorAnimation.setObjectValues(colorFrom, colorTo);
 				colorAnimation.setEvaluator(new ArgbEvaluator());
@@ -679,16 +678,16 @@ public class MainActivity extends AppCompatActivity {
 
 	}
 
-	void AnimateTimeOver(){
-		for (int i = 0; i < Tiles.length; i++)
-			if (Tiles[i] != null) {
-				final Button Tile = Tiles[i];
+	void animateTimeOver(){
+		for (int i = 0; i < tiles.length; i++)
+			if (tiles[i] != null) {
+				final Button tile = tiles[i];
 				int delay = 30 * i; //delay for tile
-//				Tile.setBackgroundTintList(ColorStateList.valueOf(/*red*/0xFFFF0000));
+//				tile.setBackgroundTintList(colorStateList.valueOf(/*red*/0xFFFF0000));
 
-				ValueAnimator colorAnimation = (ValueAnimator) Tile.getTag();
+				ValueAnimator colorAnimation = (ValueAnimator) tile.getTag();
 
-				int colorFrom = Tile.getBackgroundTintList().getDefaultColor();
+				int colorFrom = tile.getBackgroundTintList().getDefaultColor();
 				int colorTo = /*red*/0xFFFF0000;
 				colorAnimation.setObjectValues(colorFrom, colorTo);
 				colorAnimation.setEvaluator(new ArgbEvaluator());
@@ -700,16 +699,16 @@ public class MainActivity extends AppCompatActivity {
 
 	}
 
-	void AnimateNormalizeTilesColor(){
-		for (int i = 0; i < Tiles.length; i++)
-			if (Tiles[i] != null) {
-				final Button Tile = Tiles[i];
+	void animateNormalizeTilesColor(){
+		for (int i = 0; i < tiles.length; i++)
+			if (tiles[i] != null) {
+				final Button tile = tiles[i];
 				int delay = 30 * i; //delay for tile
-//				Tile.setBackgroundTintList(ColorStateList.valueOf(TileFillNormalColor1));
+//				tile.setBackgroundTintList(colorStateList.valueOf(tileFillNormalColor1));
 
-				ValueAnimator colorAnimation = (ValueAnimator) Tile.getTag();
-				int colorFrom = Tile.getBackgroundTintList().getDefaultColor();
-				int colorTo = TileFillNormalColor1;
+				ValueAnimator colorAnimation = (ValueAnimator) tile.getTag();
+				int colorFrom = tile.getBackgroundTintList().getDefaultColor();
+				int colorTo = tileFillNormalColor1;
 				colorAnimation.setObjectValues(colorFrom, colorTo);
 				colorAnimation.setEvaluator(new ArgbEvaluator());
 				colorAnimation.setDuration(1000);
@@ -720,61 +719,61 @@ public class MainActivity extends AppCompatActivity {
 
 	}
 
-	void ShowDebug(){}
+	void showDebug(){}
 
 //-------------------------------  Test different Animations   -----------------------------
 
-	public void ButtonDisappeareOnClick(View sender)
+	public void buttonDisappeareOnClick(View sender)
 	{
-		AnimateTilesDisappeare();
+		animateTilesDisappeare();
 	}
 
-	public void ButtonPlaceOnClick(View sender)
+	public void buttonPlaceOnClick(View sender)
 	{
-		AnimateNormalizeTilesColor();
-		AnimatePrepareBeforePlace();
-		AnimatePlaceTilesFast();
+		animateNormalizeTilesColor();
+		animatePrepareBeforePlace();
+		animatePlaceTilesFast();
 	}
 
-	public void ButtonTimeOverOnClick(View sender)
+	public void buttonTimeOverOnClick(View sender)
 	{
-		AnimateTimeOver();
+		animateTimeOver();
 	}
 
-	public void ButtonTimeRunningOutOnClick(View sender)
+	public void buttonTimeRunningOutOnClick(View sender)
 	{
-		AnimateTimeRunningOut();
+		animateTimeRunningOut();
 	}
 
-	public void ButtonPuzzleMatchedOnClick(View sender)
+	public void buttonPuzzleMatchedOnClick(View sender)
 	{
-		AnimatePuzzleMatched();
+		animatePuzzleMatched();
 	}
 
 //---------------------------  Realization of Property Animation   -----------------------------
 
-	ObjectAnimator AnimateFloatDelayWait(View Target, String PropertyName,
-	                                 float Value, long Duration_ms, long Delay_ms)
+	ObjectAnimator animateFloatDelayWait(View target, String propertyName,
+	                                 float value, long duration_ms, long delay_ms)
 	{
-		return AnimateFloatDelay(Target, PropertyName, Value, Duration_ms, Delay_ms, linear);
+		return animateFloatDelay(target, propertyName, value, duration_ms, delay_ms, linear);
 	}
 
-	ObjectAnimator AnimateFloatDelay(View Target, String PropertyName,
-	   float Value, long Duration_ms, long Delay_ms)
+	ObjectAnimator animateFloatDelay(View target, String propertyName,
+	   float value, long duration_ms, long delay_ms)
 	{
-		return AnimateFloatDelay(Target, PropertyName, Value, Duration_ms, Delay_ms, linear);
+		return animateFloatDelay(target, propertyName, value, duration_ms, delay_ms, linear);
 	}
 
-	ObjectAnimator AnimateFloatDelay(View Target, String PropertyName,
-      float Value, long Duration_ms, long Delay_ms,
-      TimeInterpolator AInterpolator/*, boolean DeleteWhenStopped, boolean WaitAnimationEnd*/)
+	ObjectAnimator animateFloatDelay(View target, String propertyName,
+      float value, long duration_ms, long delay_ms,
+      TimeInterpolator interpolator/*, boolean deleteWhenStopped, boolean waitAnimationEnd*/)
 	{
-		ObjectAnimator objectAnimator	= ObjectAnimator.ofFloat(Target, PropertyName, Value);
-		objectAnimator.setDuration(Duration_ms);
-		objectAnimator.setStartDelay(Delay_ms);
+		ObjectAnimator objectAnimator	= ObjectAnimator.ofFloat(target, propertyName, value);
+		objectAnimator.setDuration(duration_ms);
+		objectAnimator.setStartDelay(delay_ms);
 //		objectAnimator.setRepeatCount(1);
 //		objectAnimator.setRepeatMode(ObjectAnimator.REVERSE);
-		objectAnimator.setInterpolator(AInterpolator);
+		objectAnimator.setInterpolator(interpolator);
 		objectAnimator.start();
 		return objectAnimator;
 	}
