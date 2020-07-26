@@ -52,9 +52,7 @@ public class MainActivity extends AppCompatActivity {
 	int panelDebugMaximumHeight;
 	int resizeCount = 0;
 
-	Handler timerTime = new android.os.Handler();
-	Handler timerResize = new android.os.Handler();
-	Handler timerCreateTiles = new android.os.Handler();
+	Handler handler = new Handler();
 	Runnable timerTimeRunnable = new Runnable() {
 		public void run()	{ timerTimeTimer(); }
 	};
@@ -121,9 +119,9 @@ public class MainActivity extends AppCompatActivity {
 	{
 		mode = value;
 		if (mode == Mode.Game)
-			timerTime.postDelayed(timerTimeRunnable, 1000);
+			handler.postDelayed(timerTimeRunnable, 1000);
 		else
-			timerTime.removeCallbacks(timerTimeRunnable);
+			handler.removeCallbacks(timerTimeRunnable);
 	}
 
 	public void buttonBaseOnClick(View sender)
@@ -145,14 +143,13 @@ public class MainActivity extends AppCompatActivity {
 		setMode(Mode.GameOver);
 		animateTilesDisappeare();
 		base = value;
-		setMaxTime();
 
 		int delay;
 		if ( tiles.length > 0)
 			delay = (520 + 30 * tiles.length);
 		else
 			delay = (200);
-		timerCreateTiles.postDelayed(timerCreateTilesRunnable, delay);
+		handler.postDelayed(timerCreateTilesRunnable, delay);
 	}
 
 
@@ -160,6 +157,7 @@ public class MainActivity extends AppCompatActivity {
 	void timerCreateTilesTimer()
 	{
 		createTiles();
+		setMaxTime();
 		animatePrepareBeforePlace();
 		animatePlaceTilesFast();
 	}
@@ -417,7 +415,7 @@ public class MainActivity extends AppCompatActivity {
 
 		if (mode == Mode.Game) {
 
-			timerTime.postDelayed(timerTimeRunnable, 1000);
+			handler.postDelayed(timerTimeRunnable, 1000);
 			Log.d("Timer", "timerTime.postDelayed(timerTimeRunnable, 1000) in timerTimeTimer");
 		}
 
@@ -436,14 +434,14 @@ public class MainActivity extends AppCompatActivity {
 
 	void panelClientResize()
 	{
-		timerResize.removeCallbacks(timerResizeRunnable);
-		timerResize.postDelayed(timerResizeRunnable, 200);
+		handler.removeCallbacks(timerResizeRunnable);
+		handler.postDelayed(timerResizeRunnable, 200);
 	}
 
 
 	void timerResizeTimer()
 	{
-		timerResize.removeCallbacks(timerResizeRunnable);
+		handler.removeCallbacks(timerResizeRunnable);
 
 		long timeFromLastResize_ms = System.currentTimeMillis() - lastResizeTime;
 
